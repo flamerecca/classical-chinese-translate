@@ -478,19 +478,14 @@ def translate_line(line_num, line_content):
     # Otherwise return the line content as is (handles blank lines, etc.)
     return line_content
 
-def main():
-    input_file = "/Users/se07/code/classical-chinese-translate/楞嚴經/卷07.md"
-    output_dir = "/Users/se07/code/classical-chinese-translate/楞嚴經_白話"
-    final_output = os.path.join(output_dir, "卷07.md")
+def translate_file(input_filepath, output_dir, filename):
+    final_output = os.path.join(output_dir, filename)
     
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-        
-    with open(input_file, 'r', encoding='utf-8') as f:
+    with open(input_filepath, 'r', encoding='utf-8') as f:
         original_lines = f.read().splitlines()
         
     total_lines = len(original_lines)
-    print(f"Total lines in input: {total_lines}")
+    print(f"Total lines in {filename}: {total_lines}")
     
     translated_lines = []
     for i, line in enumerate(original_lines, 1):
@@ -509,7 +504,7 @@ def main():
         end_idx = min(start_idx + chunk_size, total_lines)
         chunk_lines = translated_lines[start_idx:end_idx]
         
-        part_filename = f"卷07.md_part_{chunk_idx + 1:02d}.md"
+        part_filename = f"{filename}_part_{chunk_idx + 1:02d}.md"
         part_filepath = os.path.join(output_dir, part_filename)
         
         with open(part_filepath, 'w', encoding='utf-8') as pf:
@@ -520,7 +515,7 @@ def main():
     # Concatenate chunks and write final file
     merged_content = []
     for chunk_idx in range(chunk_count):
-        part_filename = f"卷07.md_part_{chunk_idx + 1:02d}.md"
+        part_filename = f"{filename}_part_{chunk_idx + 1:02d}.md"
         part_filepath = os.path.join(output_dir, part_filename)
         
         with open(part_filepath, 'r', encoding='utf-8') as pf:
@@ -537,7 +532,49 @@ def main():
         
     print(f"Final file lines: {len(final_lines)}")
     assert len(final_lines) == total_lines, f"Final file line count mismatch! Expected: {total_lines}, Got: {len(final_lines)}"
-    print("Success!")
+    print(f"Successfully translated {filename}!")
+
+def main():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    input_dir = os.path.join(base_dir, "楞嚴經")
+    output_dir = os.path.join(base_dir, "楞嚴經_白話")
+    
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+        
+    # Find all .md files in input_dir
+    all_files = sorted([f for f in os.listdir(input_dir) if f.endswith('.md')])
+    
+    # Filter files that are already translated
+    pending_files = []
+    for filename in all_files:
+        target_filepath = os.path.join(output_dir, filename)
+        if os.path.exists(target_filepath):
+            print(f"跳過已翻譯檔案: {filename}")
+        else:
+            pending_files.append(filename)
+            
+    if not pending_files:
+        print("沒有需要翻譯的檔案。所有檔案已翻譯完成！")
+        return
+        
+    print(f"待翻譯檔案清單 ({len(pending_files)} 個): {pending_files}")
+    
+    batch_size = 5
+    translated_count = 0
+    
+    for filename in pending_files:
+        # Translate the file
+        input_filepath = os.path.join(input_dir, filename)
+        translate_file(input_filepath, output_dir, filename)
+        translated_count += 1
+        
+        # Stop and ask after translating 5 files
+        if translated_count % batch_size == 0 and translated_count < len(pending_files):
+            user_input = input(f"\n已完成翻譯 {translated_count} 個檔案。是否繼續翻譯下五個檔案？(y/n): ")
+            if user_input.strip().lower() not in ('y', 'yes', ''):
+                print("已暫停翻譯。")
+                break
 
 if __name__ == "__main__":
     main()
